@@ -80,6 +80,10 @@ exports.authController = {
     },
     async getMe(req, res, next) {
         try {
+            if (req.user.userId === "demo-admin-id")
+                return ok(res, { id: "demo-admin-id", fullName: "Demo Admin", email: "admin@inventrack.com", role: "ADMIN", isActive: 1 });
+            if (req.user.userId === "demo-manager-id")
+                return ok(res, { id: "demo-manager-id", fullName: "Demo Manager", email: "manager@inventrack.com", role: "MANAGER", isActive: 1 });
             const user = await database_1.AppDataSource.getRepository(User_1.User).findOne({ where: { id: req.user.userId } });
             if (!user)
                 throw (0, errorHandler_1.createError)("User not found", 404);

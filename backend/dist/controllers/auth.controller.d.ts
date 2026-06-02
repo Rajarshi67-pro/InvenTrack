@@ -7,7 +7,7 @@ export declare const authController: {
     forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void>;
     resetPassword(req: Request, res: Response, next: NextFunction): Promise<void>;
     changePassword(req: Request, res: Response, next: NextFunction): Promise<void>;
-    getMe(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getMe(req: Request, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
     updateMe(req: Request, res: Response, next: NextFunction): Promise<void>;
 };
 //# sourceMappingURL=auth.controller.d.ts.map

@@ -32,7 +32,14 @@ export const authController = {
     try { await authService.changePassword(req.user!.userId, req.body.oldPassword, req.body.newPassword); ok(res, null, "Password changed"); } catch (e) { next(e); }
   },
   async getMe(req: Request, res: Response, next: NextFunction) {
-    try { const user = await AppDataSource.getRepository(User).findOne({ where: { id: req.user!.userId } }); if (!user) throw createError("User not found", 404); ok(res, user.toSafeObject()); } catch (e) { next(e); }
+    try {
+      if (req.user!.userId === "demo-admin-id") return ok(res, { id: "demo-admin-id", fullName: "Demo Admin", email: "admin@inventrack.com", role: "ADMIN", isActive: 1 });
+      if (req.user!.userId === "demo-manager-id") return ok(res, { id: "demo-manager-id", fullName: "Demo Manager", email: "manager@inventrack.com", role: "MANAGER", isActive: 1 });
+
+      const user = await AppDataSource.getRepository(User).findOne({ where: { id: req.user!.userId } });
+      if (!user) throw createError("User not found", 404);
+      ok(res, user.toSafeObject());
+    } catch (e) { next(e); }
   },
   async updateMe(req: Request, res: Response, next: NextFunction) {
     try { const repo = AppDataSource.getRepository(User); const user = await repo.findOne({ where: { id: req.user!.userId } }); if (!user) throw createError("Not found", 404); const { fullName, phone } = req.body; if (fullName) user.fullName = fullName; if (phone) user.phone = phone; await repo.save(user); ok(res, user.toSafeObject()); } catch (e) { next(e); }

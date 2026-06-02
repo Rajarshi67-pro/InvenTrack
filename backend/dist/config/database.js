@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.disconnectDatabase = exports.connectDatabase = exports.AppDataSource = void 0;
 require("reflect-metadata");
@@ -17,7 +50,18 @@ const Forecast_1 = require("../entities/Forecast");
 const Notification_1 = require("../entities/Notification");
 const AuditLog_1 = require("../entities/AuditLog");
 const RefreshToken_1 = require("../entities/RefreshToken");
-exports.AppDataSource = new typeorm_1.DataSource({
+const useSqliteFallback = !env_1.env.DB_PASSWORD && !env_1.env.DB_PASS;
+exports.AppDataSource = new typeorm_1.DataSource(useSqliteFallback ? {
+    type: 'sqlite',
+    database: 'demo-fallback.sqlite',
+    entities: [
+        User_1.User, Role_1.Role, Warehouse_1.Warehouse, Product_1.Product, Inventory_1.Inventory,
+        Supplier_1.Supplier, PurchaseOrder_1.PurchaseOrder, PurchaseOrderItem_1.PurchaseOrderItem,
+        StockMovement_1.StockMovement, Forecast_1.Forecast, Notification_1.Notification, AuditLog_1.AuditLog, RefreshToken_1.RefreshToken
+    ],
+    synchronize: true, // Auto-create tables for the demo fallback
+    logging: false
+} : {
     type: 'oracle',
     host: env_1.env.DB_HOST,
     port: parseInt(env_1.env.DB_PORT),
@@ -41,17 +85,23 @@ exports.AppDataSource = new typeorm_1.DataSource({
     },
 });
 const connectDatabase = async () => {
-    // Skip connection if no meaningful host is configured
-    const host = env_1.env.DB_HOST;
-    const password = env_1.env.DB_PASSWORD || env_1.env.DB_PASS || '';
-    if (!host || !password) {
-        console.warn('⚠️  Oracle DB credentials not configured – running in degraded mode (DB routes will return 503).');
-        return;
-    }
     try {
         if (!exports.AppDataSource.isInitialized) {
             await exports.AppDataSource.initialize();
-            console.log('✅ Oracle Database connected successfully');
+            console.log(`✅ ${useSqliteFallback ? 'SQLite Fallback' : 'Oracle'} Database connected successfully`);
+            // If we are in fallback mode, seed the demo users so login works!
+            if (useSqliteFallback) {
+                const userRepo = exports.AppDataSource.getRepository(User_1.User);
+                const bcrypt = await Promise.resolve().then(() => __importStar(require("bcryptjs")));
+                const hash = await bcrypt.hash("Admin@123", 12);
+                if (!(await userRepo.findOne({ where: { email: "admin@inventrack.com" } }))) {
+                    await userRepo.save(userRepo.create({ fullName: "Demo Admin", email: "admin@inventrack.com", passwordHash: hash, role: "ADMIN", isActive: 1 }));
+                }
+                if (!(await userRepo.findOne({ where: { email: "manager@inventrack.com" } }))) {
+                    await userRepo.save(userRepo.create({ fullName: "Demo Manager", email: "manager@inventrack.com", passwordHash: hash, role: "MANAGER", isActive: 1 }));
+                }
+                console.log('✅ Seeded demo credentials for SQLite fallback');
+            }
         }
     }
     catch (error) {
