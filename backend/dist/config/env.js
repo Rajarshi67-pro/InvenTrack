@@ -30,7 +30,7 @@ const envSchema = zod_1.z.object({
     SMTP_PASS: zod_1.z.string().optional(),
     EMAIL_FROM: zod_1.z.string().default('noreply@inventrack.com'),
     // App
-    FRONTEND_URL: zod_1.z.string().default('http://localhost:3000'),
+    FRONTEND_URL: zod_1.z.string().default('http://localhost:3000'), // comma-separate multiple origins
     RATE_LIMIT_WINDOW_MS: zod_1.z.string().default('900000'),
     RATE_LIMIT_MAX: zod_1.z.string().default('100'),
     // Oracle Analytics Cloud

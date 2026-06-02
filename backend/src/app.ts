@@ -21,8 +21,32 @@ import dashboardRoutes from "./routes/dashboard.routes";
 
 const app = express();
 
+// ── CORS ────────────────────────────────────────────────────────────────────
+// Build an allowlist from FRONTEND_URL (comma-separated) + dev defaults
+const rawOrigins = (env.FRONTEND_URL || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const corsOptions: cors.CorsOptions = {
+  origin(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Render health checks)
+    if (!origin) return callback(null, true);
+    // Allow any Vercel deployment of this project automatically
+    const isVercel = /\.vercel\.app$/.test(origin);
+    if (isVercel || rawOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(cors({ origin: env.FRONTEND_URL, credentials: true, methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"], allowedHeaders: ["Content-Type","Authorization"] }));
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // pre-flight for all routes
 app.use(compression());
 app.use(morgan("combined"));
 app.use(express.json({ limit: "10mb" }));
