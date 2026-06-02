@@ -11,11 +11,12 @@ const envSchema = zod_1.z.object({
     NODE_ENV: zod_1.z.enum(['development', 'production', 'test']).default('development'),
     PORT: zod_1.z.string().default('5000'),
     // Database
-    DB_HOST: zod_1.z.string().min(1),
+    DB_HOST: zod_1.z.string().default('localhost'),
     DB_PORT: zod_1.z.string().default('1521'),
-    DB_USER: zod_1.z.string().min(1),
-    DB_PASSWORD: zod_1.z.string().min(1),
-    DB_SID: zod_1.z.string().min(1),
+    DB_USER: zod_1.z.string().default('inventrack'),
+    DB_PASSWORD: zod_1.z.string().default(''),
+    DB_PASS: zod_1.z.string().optional(), // alias kept for backward-compat
+    DB_SID: zod_1.z.string().default('ORCL'),
     DB_SERVICE_NAME: zod_1.z.string().optional(),
     // JWT
     JWT_ACCESS_SECRET: zod_1.z.string().min(32),

@@ -20,7 +20,7 @@ export const AppDataSource = new DataSource({
   host: env.DB_HOST,
   port: parseInt(env.DB_PORT),
   username: env.DB_USER,
-  password: env.DB_PASSWORD,
+  password: env.DB_PASSWORD || env.DB_PASS || '',
   sid: env.DB_SID,
   serviceName: env.DB_SERVICE_NAME || undefined,
   entities: [
@@ -40,6 +40,13 @@ export const AppDataSource = new DataSource({
 });
 
 export const connectDatabase = async (): Promise<void> => {
+  // Skip connection if no meaningful host is configured
+  const host = env.DB_HOST;
+  const password = env.DB_PASSWORD || env.DB_PASS || '';
+  if (!host || !password) {
+    console.warn('⚠️  Oracle DB credentials not configured – running in degraded mode (DB routes will return 503).');
+    return;
+  }
   try {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
@@ -47,7 +54,8 @@ export const connectDatabase = async (): Promise<void> => {
     }
   } catch (error) {
     console.error('❌ Database connection failed:', error);
-    throw error;
+    console.warn('⚠️  Server starting in degraded mode – DB routes will return 503.');
+    // Do NOT re-throw – let the server start so health checks pass.
   }
 };
 

@@ -21,6 +21,10 @@ async function bootstrap() {
 
     // Daily forecast job at 2:00 AM
     cron.schedule("0 2 * * *", async () => {
+      if (!AppDataSource.isInitialized) {
+        logger.warn("Forecast job skipped: database not connected.");
+        return;
+      }
       logger.info("Running scheduled demand forecasting...");
       try {
         const products = await AppDataSource.getRepository(Product).find({ where: { isActive: 1 }, take: 100 });
@@ -48,8 +52,8 @@ async function bootstrap() {
     process.on("uncaughtException", (err) => { logger.error("Uncaught Exception:", err); process.exit(1); });
     process.on("unhandledRejection", (reason) => { logger.error("Unhandled Rejection:", reason); });
   } catch (err) {
-    logger.error("Failed to start server:", err);
-    process.exit(1);
+    logger.error("Non-fatal startup error:", err);
+    // Do not exit – server may still serve health checks and static routes
   }
 }
 

@@ -16,6 +16,7 @@ export declare const env: {
     FRONTEND_URL: string;
     RATE_LIMIT_WINDOW_MS: string;
     RATE_LIMIT_MAX: string;
+    DB_PASS?: string | undefined;
     DB_SERVICE_NAME?: string | undefined;
     SMTP_USER?: string | undefined;
     SMTP_PASS?: string | undefined;

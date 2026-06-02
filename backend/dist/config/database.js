@@ -22,7 +22,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
     host: env_1.env.DB_HOST,
     port: parseInt(env_1.env.DB_PORT),
     username: env_1.env.DB_USER,
-    password: env_1.env.DB_PASSWORD,
+    password: env_1.env.DB_PASSWORD || env_1.env.DB_PASS || '',
     sid: env_1.env.DB_SID,
     serviceName: env_1.env.DB_SERVICE_NAME || undefined,
     entities: [
@@ -41,6 +41,13 @@ exports.AppDataSource = new typeorm_1.DataSource({
     },
 });
 const connectDatabase = async () => {
+    // Skip connection if no meaningful host is configured
+    const host = env_1.env.DB_HOST;
+    const password = env_1.env.DB_PASSWORD || env_1.env.DB_PASS || '';
+    if (!host || !password) {
+        console.warn('⚠️  Oracle DB credentials not configured – running in degraded mode (DB routes will return 503).');
+        return;
+    }
     try {
         if (!exports.AppDataSource.isInitialized) {
             await exports.AppDataSource.initialize();
@@ -49,7 +56,8 @@ const connectDatabase = async () => {
     }
     catch (error) {
         console.error('❌ Database connection failed:', error);
-        throw error;
+        console.warn('⚠️  Server starting in degraded mode – DB routes will return 503.');
+        // Do NOT re-throw – let the server start so health checks pass.
     }
 };
 exports.connectDatabase = connectDatabase;

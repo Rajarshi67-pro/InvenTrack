@@ -7,11 +7,12 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().default('5000'),
   // Database
-  DB_HOST: z.string().min(1),
+  DB_HOST: z.string().default('localhost'),
   DB_PORT: z.string().default('1521'),
-  DB_USER: z.string().min(1),
-  DB_PASSWORD: z.string().min(1),
-  DB_SID: z.string().min(1),
+  DB_USER: z.string().default('inventrack'),
+  DB_PASSWORD: z.string().default(''),
+  DB_PASS: z.string().optional(),   // alias kept for backward-compat
+  DB_SID: z.string().default('ORCL'),
   DB_SERVICE_NAME: z.string().optional(),
   // JWT
   JWT_ACCESS_SECRET: z.string().min(32),
