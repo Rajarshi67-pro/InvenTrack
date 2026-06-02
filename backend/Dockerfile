@@ -1,13 +1,14 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 WORKDIR /app
-RUN apk add --no-cache curl tzdata && cp /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+RUN apt-get update && apt-get install -y curl tzdata && rm -rf /var/lib/apt/lists/*
+ENV TZ=Asia/Kolkata
 COPY package*.json ./
 RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
 COPY --from=builder /app/dist ./dist
