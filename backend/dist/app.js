@@ -47,6 +47,25 @@ app.use("/api/v1/users", users_routes_1.default);
 app.use("/api/v1/dashboard", dashboard_routes_1.default);
 // API docs
 app.get("/api/docs.json", (_, res) => res.json({ openapi: "3.0.0", info: { title: "InvenTrack Pro API", version: "1.0.0", description: "Enterprise IMS REST API" }, servers: [{ url: "/api/v1" }] }));
+// Root
+app.get("/", (_, res) => res.json({
+    name: "InvenTrack Pro API",
+    version: "1.0.0",
+    status: "running",
+    timestamp: new Date().toISOString(),
+    endpoints: {
+        health: "GET /health",
+        docs: "GET /api/docs.json",
+        auth: "/api/v1/auth",
+        products: "/api/v1/products",
+        warehouses: "/api/v1/warehouses",
+        inventory: "/api/v1/inventory",
+        suppliers: "/api/v1/suppliers",
+        orders: "/api/v1/purchase-orders",
+        dashboard: "/api/v1/dashboard",
+        reports: "/api/v1/reports",
+    },
+}));
 app.use(errorHandler_1.notFound);
 app.use(errorHandler_1.errorHandler);
 exports.default = app;
