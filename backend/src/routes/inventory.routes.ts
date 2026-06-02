@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { inventoryController } from "../controllers/inventory.controller";
+import { authenticate } from "../middleware/authenticate";
+const r = Router();
+r.use(authenticate);
+r.post("/stock-in", inventoryController.stockIn);
+r.post("/stock-out", inventoryController.stockOut);
+r.post("/transfer", inventoryController.transfer);
+r.post("/adjustment", inventoryController.adjustment);
+r.get("/movements", inventoryController.getMovements);
+r.get("/levels", inventoryController.getLevels);
+export default r;

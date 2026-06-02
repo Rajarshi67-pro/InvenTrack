@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { dashboardController } from "../controllers/dashboard.controller";
+import { authenticate } from "../middleware/authenticate";
+const r = Router();
+r.use(authenticate);
+r.get("/stats", dashboardController.getStats);
+r.get("/inventory-trends", dashboardController.getInventoryTrends);
+r.get("/supplier-performance", dashboardController.getSupplierPerformance);
+r.get("/warehouse-utilization", dashboardController.getWarehouseUtilization);
+r.get("/audit-logs", dashboardController.getAuditLogs);
+export default r;

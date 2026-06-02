@@ -1,0 +1,13 @@
+{
+  "name": "inventrack-pro",
+  "version": "1.0.0",
+  "description": "Enterprise Inventory & Supply Chain Management System",
+  "private": true,
+  "scripts": {
+    "start": "bash start.sh",
+    "mock": "cd mock-server && node server.js",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "install:all": "cd frontend && npm install && cd ../mock-server && npm install"
+  }
+}

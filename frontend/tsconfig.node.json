@@ -1,0 +1,2 @@
+{ "compilerOptions": { "skipLibCheck": true, "module": "ESNext", "moduleResolution": "bundler", "allowSyntheticDefaultImports": true, "strict": true } }
+

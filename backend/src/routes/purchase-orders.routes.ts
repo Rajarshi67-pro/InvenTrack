@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { purchaseOrdersController } from "../controllers/purchaseOrders.controller";
+import { authenticate } from "../middleware/authenticate";
+import { requireAdmin } from "../middleware/rbac";
+const r = Router();
+r.use(authenticate);
+r.get("/", purchaseOrdersController.getAll);
+r.get("/:id", purchaseOrdersController.getById);
+r.post("/", purchaseOrdersController.create);
+r.patch("/:id/status", purchaseOrdersController.updateStatus);
+r.delete("/:id", requireAdmin, purchaseOrdersController.delete);
+export default r;

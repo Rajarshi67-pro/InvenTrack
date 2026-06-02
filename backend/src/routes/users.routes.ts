@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { usersController } from "../controllers/users.controller";
+import { authenticate } from "../middleware/authenticate";
+import { requireAdmin } from "../middleware/rbac";
+const r = Router();
+r.use(authenticate, requireAdmin);
+r.get("/", usersController.getAll);
+r.get("/:id", usersController.getById);
+r.put("/:id", usersController.update);
+r.patch("/:id/toggle-active", usersController.toggleActive);
+export default r;

@@ -1,0 +1,13 @@
+import { Router } from "express";
+import { suppliersController } from "../controllers/suppliers.controller";
+import { authenticate } from "../middleware/authenticate";
+import { requireAdmin } from "../middleware/rbac";
+const r = Router();
+r.use(authenticate);
+r.get("/", suppliersController.getAll);
+r.get("/:id", suppliersController.getById);
+r.get("/:id/performance", suppliersController.getPerformance);
+r.post("/", requireAdmin, suppliersController.create);
+r.put("/:id", requireAdmin, suppliersController.update);
+r.delete("/:id", requireAdmin, suppliersController.delete);
+export default r;

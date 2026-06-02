@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
+    --sidebar-width: 260px;
+    --topbar-height: 64px;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 6%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { font-family: 'Inter', system-ui, sans-serif; scroll-behavior: smooth; }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/40; }
+}
+
+@layer components {
+  /* ── Stat Cards ── */
+  .stat-card {
+    @apply relative bg-card border border-border rounded-2xl p-5 overflow-hidden transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+  .stat-card-glow-blue::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-blue-600;
+  }
+  .stat-card-glow-red::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-red-500 to-rose-600;
+  }
+  .stat-card-glow-green::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-green-600;
+  }
+  .stat-card-glow-amber::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-500 to-yellow-600;
+  }
+  .stat-card-glow-purple::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-violet-500 to-purple-600;
+  }
+
+  /* ── Glass Overlay ── */
+  .glass {
+    @apply bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10;
+  }
+
+  /* ── Page Layout ── */
+  .page-header {
+    @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6;
+  }
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-foreground;
+  }
+  .page-subtitle {
+    @apply text-sm text-muted-foreground mt-0.5;
+  }
+
+  /* ── Status Badges ── */
+  .badge-status {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border;
+  }
+  .badge-normal { @apply badge-status bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400; }
+  .badge-low { @apply badge-status bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400; }
+  .badge-out { @apply badge-status bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400; }
+  .badge-over { @apply badge-status bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-400; }
+  .badge-draft { @apply badge-status bg-gray-100 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400; }
+  .badge-approved { @apply badge-status bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400; }
+  .badge-ordered { @apply badge-status bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400; }
+  .badge-delivered { @apply badge-normal; }
+  .badge-cancelled { @apply badge-out; }
+
+  /* ── Data Table ── */
+  .data-table { @apply w-full text-sm; }
+  .data-table thead tr { @apply border-b border-border; }
+  .data-table thead th { @apply px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider; }
+  .data-table tbody tr { @apply border-b border-border/50 hover:bg-muted/30 transition-colors; }
+  .data-table tbody td { @apply px-4 py-3 text-foreground; }
+  .data-table tbody tr:last-child { @apply border-0; }
+
+  /* ── Nav Items ── */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 cursor-pointer;
+  }
+  .nav-item.active {
+    @apply text-primary bg-primary/10 dark:bg-primary/15 font-semibold;
+  }
+
+  /* ── Shimmer Skeleton ── */
+  .skeleton {
+    @apply relative overflow-hidden bg-muted rounded-lg;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(90deg, transparent, hsl(var(--muted-foreground) / 0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* ── Gradient Text ── */
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent;
+  }
+  .gradient-text-red {
+    @apply bg-gradient-to-r from-red-600 to-rose-400 bg-clip-text text-transparent;
+  }
+
+  /* ── Glow Input ── */
+  .glow-input {
+    @apply border-input bg-background ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+}
