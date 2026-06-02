@@ -15,7 +15,19 @@ import { Notification } from '../entities/Notification';
 import { AuditLog } from '../entities/AuditLog';
 import { RefreshToken } from '../entities/RefreshToken';
 
-export const AppDataSource = new DataSource({
+const useSqliteFallback = !env.DB_PASSWORD && !env.DB_PASS;
+
+export const AppDataSource = new DataSource(useSqliteFallback ? {
+  type: 'sqlite',
+  database: 'demo-fallback.sqlite',
+  entities: [
+    User, Role, Warehouse, Product, Inventory,
+    Supplier, PurchaseOrder, PurchaseOrderItem,
+    StockMovement, Forecast, Notification, AuditLog, RefreshToken
+  ],
+  synchronize: true, // Auto-create tables for the demo fallback
+  logging: false
+} : {
   type: 'oracle',
   host: env.DB_HOST,
   port: parseInt(env.DB_PORT),
@@ -40,17 +52,25 @@ export const AppDataSource = new DataSource({
 });
 
 export const connectDatabase = async (): Promise<void> => {
-  // Skip connection if no meaningful host is configured
-  const host = env.DB_HOST;
-  const password = env.DB_PASSWORD || env.DB_PASS || '';
-  if (!host || !password) {
-    console.warn('⚠️  Oracle DB credentials not configured – running in degraded mode (DB routes will return 503).');
-    return;
-  }
   try {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
-      console.log('✅ Oracle Database connected successfully');
+      console.log(`✅ ${useSqliteFallback ? 'SQLite Fallback' : 'Oracle'} Database connected successfully`);
+      
+      // If we are in fallback mode, seed the demo users so login works!
+      if (useSqliteFallback) {
+        const userRepo = AppDataSource.getRepository(User);
+        const bcrypt = await import("bcryptjs");
+        const hash = await bcrypt.hash("Admin@123", 12);
+        
+        if (!(await userRepo.findOne({ where: { email: "admin@inventrack.com" } }))) {
+          await userRepo.save(userRepo.create({ fullName: "Demo Admin", email: "admin@inventrack.com", passwordHash: hash, role: "ADMIN", isActive: 1 }));
+        }
+        if (!(await userRepo.findOne({ where: { email: "manager@inventrack.com" } }))) {
+          await userRepo.save(userRepo.create({ fullName: "Demo Manager", email: "manager@inventrack.com", passwordHash: hash, role: "MANAGER", isActive: 1 }));
+        }
+        console.log('✅ Seeded demo credentials for SQLite fallback');
+      }
     }
   } catch (error) {
     console.error('❌ Database connection failed:', error);
