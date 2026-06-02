@@ -1,0 +1,26 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_controller_1 = require("../controllers/auth.controller");
+const authenticate_1 = require("../middleware/authenticate");
+const rbac_1 = require("../middleware/rbac");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const validation_1 = require("../middleware/validation");
+const zod_1 = require("zod");
+const router = (0, express_1.Router)();
+const loginSchema = zod_1.z.object({ email: zod_1.z.string().email(), password: zod_1.z.string().min(6) });
+const registerSchema = zod_1.z.object({ fullName: zod_1.z.string().min(2), email: zod_1.z.string().email(), password: zod_1.z.string().min(8).regex(/[A-Z]/).regex(/[0-9]/), role: zod_1.z.enum(["ADMIN", "MANAGER"]), warehouseId: zod_1.z.string().optional() });
+const fpSchema = zod_1.z.object({ email: zod_1.z.string().email() });
+const rpSchema = zod_1.z.object({ token: zod_1.z.string(), password: zod_1.z.string().min(8).regex(/[A-Z]/).regex(/[0-9]/) });
+const cpSchema = zod_1.z.object({ oldPassword: zod_1.z.string(), newPassword: zod_1.z.string().min(8) });
+router.post("/login", rateLimiter_1.authLimiter, (0, validation_1.validate)(loginSchema), auth_controller_1.authController.login);
+router.post("/register", authenticate_1.authenticate, rbac_1.requireAdmin, (0, validation_1.validate)(registerSchema), auth_controller_1.authController.register);
+router.post("/refresh", rateLimiter_1.strictLimiter, auth_controller_1.authController.refresh);
+router.post("/logout", authenticate_1.authenticate, auth_controller_1.authController.logout);
+router.post("/forgot-password", rateLimiter_1.authLimiter, (0, validation_1.validate)(fpSchema), auth_controller_1.authController.forgotPassword);
+router.post("/reset-password", (0, validation_1.validate)(rpSchema), auth_controller_1.authController.resetPassword);
+router.put("/change-password", authenticate_1.authenticate, (0, validation_1.validate)(cpSchema), auth_controller_1.authController.changePassword);
+router.get("/me", authenticate_1.authenticate, auth_controller_1.authController.getMe);
+router.put("/me", authenticate_1.authenticate, auth_controller_1.authController.updateMe);
+exports.default = router;
+//# sourceMappingURL=auth.routes.js.map

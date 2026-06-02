@@ -1,0 +1,1 @@
+{"version":3,"file":"forecasting.controller.d.ts","sourceRoot":"","sources":["../../src/controllers/forecasting.controller.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAQ1D,eAAO,MAAM,qBAAqB;kBACZ,OAAO,OAAO,QAAQ,QAAQ,YAAY;sBACtC,OAAO,OAAO,QAAQ,QAAQ,YAAY;4BACpC,OAAO,OAAO,QAAQ,QAAQ,YAAY;CACzE,CAAC"}
