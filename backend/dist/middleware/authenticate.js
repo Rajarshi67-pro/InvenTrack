@@ -17,6 +17,17 @@ const authenticate = async (req, res, next) => {
         }
         const token = authHeader.split(' ')[1];
         const payload = (0, jwt_1.verifyAccessToken)(token);
+        // ── DEMO OVERRIDE ──────────────────────────────────────────────────
+        if (payload.userId === "demo-admin-id" || payload.userId === "demo-manager-id") {
+            req.user = {
+                userId: payload.userId,
+                email: payload.userId === "demo-admin-id" ? "admin@inventrack.com" : "manager@inventrack.com",
+                role: payload.userId === "demo-admin-id" ? "ADMIN" : "MANAGER",
+                warehouseId: undefined,
+            };
+            return next();
+        }
+        // ───────────────────────────────────────────────────────────────────
         // Verify user still exists and is active
         const userRepo = database_1.AppDataSource.getRepository(User_1.User);
         const user = await userRepo.findOne({ where: { id: payload.userId } });
