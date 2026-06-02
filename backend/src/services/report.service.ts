@@ -104,7 +104,6 @@ export const reportService = {
   _generateCSV(columns: { header: string; key: string }[], data: Record<string, unknown>[]): Promise<Buffer> {
     const header = columns.map((c) => `"${c.header}"`).join(",");
     const rows = data.map((row) => columns.map((col) => `"${String(row[col.key] ?? "").replace(/"/g, '""')}"`).join(","));
-    return Promise.resolve(Buffer.from([header, ...rows].join("
-"), "utf-8"));
+    return Promise.resolve(Buffer.from([header, ...rows].join("\n"), "utf-8"));
   },
 };
