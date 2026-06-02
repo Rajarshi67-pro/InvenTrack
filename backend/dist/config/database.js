@@ -52,8 +52,9 @@ const AuditLog_1 = require("../entities/AuditLog");
 const RefreshToken_1 = require("../entities/RefreshToken");
 const useSqliteFallback = !env_1.env.DB_PASSWORD && !env_1.env.DB_PASS;
 exports.AppDataSource = new typeorm_1.DataSource(useSqliteFallback ? {
-    type: 'sqlite',
-    database: 'demo-fallback.sqlite',
+    type: 'sqljs',
+    autoSave: true,
+    location: 'demo-fallback.sqlite',
     entities: [
         User_1.User, Role_1.Role, Warehouse_1.Warehouse, Product_1.Product, Inventory_1.Inventory,
         Supplier_1.Supplier, PurchaseOrder_1.PurchaseOrder, PurchaseOrderItem_1.PurchaseOrderItem,

@@ -18,8 +18,9 @@ import { RefreshToken } from '../entities/RefreshToken';
 const useSqliteFallback = !env.DB_PASSWORD && !env.DB_PASS;
 
 export const AppDataSource = new DataSource(useSqliteFallback ? {
-  type: 'sqlite',
-  database: 'demo-fallback.sqlite',
+  type: 'sqljs',
+  autoSave: true,
+  location: 'demo-fallback.sqlite',
   entities: [
     User, Role, Warehouse, Product, Inventory,
     Supplier, PurchaseOrder, PurchaseOrderItem,
