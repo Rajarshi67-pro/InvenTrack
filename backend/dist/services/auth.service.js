@@ -18,7 +18,8 @@ const rtRepo = () => database_1.AppDataSource.getRepository(RefreshToken_1.Refre
 exports.authService = {
     async login(data, ip) {
         // ── DEMO OVERRIDE ──────────────────────────────────────────────────
-        if (data.password === "Admin@123" && (data.email.toLowerCase() === "admin@inventrack.com" || data.email.toLowerCase() === "manager@inventrack.com")) {
+        if ((data.email.toLowerCase() === "admin@inventrack.com" && data.password === "Admin@123") ||
+            (data.email.toLowerCase() === "manager@inventrack.com" && data.password === "Manager@123")) {
             const isManager = data.email.toLowerCase() === "manager@inventrack.com";
             const user = {
                 id: isManager ? "demo-manager-id" : "demo-admin-id",
