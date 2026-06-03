@@ -6,9 +6,16 @@ const User_1 = require("../entities/User");
 const errorHandler_1 = require("../middleware/errorHandler");
 const ok = (res, data, message = "Success", status = 200) => res.status(status).json({ success: true, message, data, timestamp: new Date().toISOString() });
 const repo = () => database_1.AppDataSource.getRepository(User_1.User);
+const MOCK_USERS = [
+    { id: "demo-admin-id", fullName: "Demo Admin", email: "admin@inventrack.com", role: "ADMIN", isActive: 1, phone: null, warehouseId: null },
+    { id: "demo-manager-id", fullName: "Demo Manager", email: "manager@inventrack.com", role: "MANAGER", isActive: 1, phone: null, warehouseId: null },
+];
+const dbDown = () => !database_1.AppDataSource.isInitialized;
 exports.usersController = {
     async getAll(req, res, next) {
         try {
+            if (dbDown())
+                return ok(res, { data: MOCK_USERS, total: MOCK_USERS.length, page: 1, limit: 20, totalPages: 1, hasNext: false, hasPrev: false });
             const { page = 1, limit = 20, search } = req.query;
             const lim = Math.min(Number(limit), 100);
             const qb = repo().createQueryBuilder("u").leftJoinAndSelect("u.warehouse", "warehouse").orderBy("u.created_at", "DESC").skip((Number(page) - 1) * lim).take(lim);
@@ -24,6 +31,8 @@ exports.usersController = {
     },
     async getById(req, res, next) {
         try {
+            if (dbDown())
+                return ok(res, MOCK_USERS.find(u => u.id === req.params.id) || MOCK_USERS[0]);
             const u = await repo().findOne({ where: { id: req.params.id }, relations: ["warehouse"] });
             if (!u)
                 throw (0, errorHandler_1.createError)("User not found", 404);
@@ -35,6 +44,8 @@ exports.usersController = {
     },
     async update(req, res, next) {
         try {
+            if (dbDown())
+                return ok(res, { id: req.params.id, ...req.body });
             const u = await repo().findOne({ where: { id: req.params.id } });
             if (!u)
                 throw (0, errorHandler_1.createError)("User not found", 404);
@@ -56,6 +67,8 @@ exports.usersController = {
     },
     async toggleActive(req, res, next) {
         try {
+            if (dbDown())
+                return ok(res, { id: req.params.id, isActive: 0 }, "Toggled (demo mode)");
             const u = await repo().findOne({ where: { id: req.params.id } });
             if (!u)
                 throw (0, errorHandler_1.createError)("User not found", 404);

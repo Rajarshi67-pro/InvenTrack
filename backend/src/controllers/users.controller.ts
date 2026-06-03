@@ -8,9 +8,17 @@ const ok = <T>(res: Response, data: T, message = "Success", status = 200) =>
   res.status(status).json({ success: true, message, data, timestamp: new Date().toISOString() } as ApiResponse<T>);
 const repo = () => AppDataSource.getRepository(User);
 
+const MOCK_USERS = [
+  { id: "demo-admin-id", fullName: "Demo Admin", email: "admin@inventrack.com", role: "ADMIN", isActive: 1, phone: null, warehouseId: null },
+  { id: "demo-manager-id", fullName: "Demo Manager", email: "manager@inventrack.com", role: "MANAGER", isActive: 1, phone: null, warehouseId: null },
+];
+
+const dbDown = () => !AppDataSource.isInitialized;
+
 export const usersController = {
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
+      if (dbDown()) return ok(res, { data: MOCK_USERS, total: MOCK_USERS.length, page: 1, limit: 20, totalPages: 1, hasNext: false, hasPrev: false });
       const { page = 1, limit = 20, search } = req.query as Record<string, string>;
       const lim = Math.min(Number(limit), 100);
       const qb = repo().createQueryBuilder("u").leftJoinAndSelect("u.warehouse", "warehouse").orderBy("u.created_at", "DESC").skip((Number(page) - 1) * lim).take(lim);
@@ -21,12 +29,26 @@ export const usersController = {
     } catch (e) { next(e); }
   },
   async getById(req: Request, res: Response, next: NextFunction) {
-    try { const u = await repo().findOne({ where: { id: req.params.id }, relations: ["warehouse"] }); if (!u) throw createError("User not found", 404); ok(res, u.toSafeObject()); } catch (e) { next(e); }
+    try {
+      if (dbDown()) return ok(res, MOCK_USERS.find(u => u.id === req.params.id) || MOCK_USERS[0]);
+      const u = await repo().findOne({ where: { id: req.params.id }, relations: ["warehouse"] }); if (!u) throw createError("User not found", 404); ok(res, u.toSafeObject());
+    } catch (e) { next(e); }
   },
   async update(req: Request, res: Response, next: NextFunction) {
-    try { const u = await repo().findOne({ where: { id: req.params.id } }); if (!u) throw createError("User not found", 404); const { fullName, phone, role, warehouseId } = req.body; if (fullName) u.fullName = fullName; if (phone) u.phone = phone; if (role) u.role = role; if (warehouseId !== undefined) u.warehouseId = warehouseId; await repo().save(u); ok(res, u.toSafeObject()); } catch (e) { next(e); }
+    try {
+      if (dbDown()) return ok(res, { id: req.params.id, ...req.body });
+      const u = await repo().findOne({ where: { id: req.params.id } }); if (!u) throw createError("User not found", 404);
+      const { fullName, phone, role, warehouseId } = req.body;
+      if (fullName) u.fullName = fullName; if (phone) u.phone = phone; if (role) u.role = role; if (warehouseId !== undefined) u.warehouseId = warehouseId;
+      await repo().save(u); ok(res, u.toSafeObject());
+    } catch (e) { next(e); }
   },
   async toggleActive(req: Request, res: Response, next: NextFunction) {
-    try { const u = await repo().findOne({ where: { id: req.params.id } }); if (!u) throw createError("User not found", 404); if (u.id === req.user?.userId) throw createError("Cannot deactivate yourself", 400); u.isActive = u.isActive === 1 ? 0 : 1; await repo().save(u); ok(res, u.toSafeObject(), `User ${u.isActive ? "activated" : "deactivated"}`); } catch (e) { next(e); }
+    try {
+      if (dbDown()) return ok(res, { id: req.params.id, isActive: 0 }, "Toggled (demo mode)");
+      const u = await repo().findOne({ where: { id: req.params.id } }); if (!u) throw createError("User not found", 404);
+      if (u.id === req.user?.userId) throw createError("Cannot deactivate yourself", 400);
+      u.isActive = u.isActive === 1 ? 0 : 1; await repo().save(u); ok(res, u.toSafeObject(), `User ${u.isActive ? "activated" : "deactivated"}`);
+    } catch (e) { next(e); }
   },
 };
