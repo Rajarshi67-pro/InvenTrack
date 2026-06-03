@@ -65,7 +65,7 @@ export default function WarehousesPage() {
           <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }} className="glass-card p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${s.color}15` }}>
-                <s.icon className="w-4 h-4" style={{ color: s.color }} />
+                <s.icon className="w-4.5 h-4.5" style={{ color: s.color }} />
               </div>
             </div>
             <div className="text-2xl font-bold text-white">{s.value}</div>
@@ -77,7 +77,7 @@ export default function WarehousesPage() {
       {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5">
-          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="glass-card h-52 animate-pulse" />)}
+          {Array.from({length:4}).map((_,i) => <div key={i} className="glass-card h-52 animate-pulse" />)}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

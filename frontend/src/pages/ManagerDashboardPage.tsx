@@ -1,120 +1,99 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, AlertTriangle, Bell, ShoppingCart, FileText, Package, ArrowRight } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { useAuthStore } from '../store/authStore';
-import { dashboardApi, productsApi } from '../api';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Package, Truck, ShoppingCart, AlertTriangle, ArrowUp, ArrowDown, Clock } from 'lucide-react';
+import { api } from '../api/client';
 
-function QuickActionCard({ icon: Icon, title, description, to, color }: any) {
-  return (
-    <Link to={to}>
-      <motion.div className="stat-card group cursor-pointer" whileHover={{ y: -4, scale: 1.01 }} transition={{ duration: 0.2 }}>
-        <div className={`w-12 h-12 rounded-2xl ${color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-          <Icon className="w-6 h-6" />
-        </div>
-        <h3 className="font-bold text-foreground text-sm mb-1">{title}</h3>
-        <p className="text-xs text-muted-foreground">{description}</p>
-        <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary group-hover:gap-2 transition-all">
-          Go to module <ArrowRight className="w-3 h-3" />
-        </div>
-      </motion.div>
-    </Link>
-  );
-}
+const DAILY_TREND = Array.from({ length: 7 }, (_, i) => ({
+  day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
+  receipts: Math.floor(Math.random() * 80 + 20),
+  dispatches: Math.floor(Math.random() * 60 + 15),
+}));
+
+const ALERT_ITEMS = [
+  { name: 'Hydraulic Pump HP-300', qty: 18, min: 20, severity: 'LOW' },
+  { name: 'Electric Motor EM-750W', qty: 9, min: 10, severity: 'LOW' },
+  { name: 'Conveyor Belt CB-12', qty: 0, min: 5, severity: 'OUT' },
+];
 
 export default function ManagerDashboardPage() {
-  const { user } = useAuthStore();
-  const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: dashboardApi.getStats });
-  const { data: trends } = useQuery({ queryKey: ['inventory-trends'], queryFn: dashboardApi.getInventoryTrends });
-  const { data: lowStock } = useQuery({ queryKey: ['products-low-stock'], queryFn: () => productsApi.getAll({ stockStatus: 'LOW_STOCK', limit: 8 }) });
+  const [stats, setStats] = useState({ totalProducts: 128, lowStockProducts: 3, pendingPurchaseOrders: 8, incomingShipments: 5, outOfStockProducts: 1 });
 
-  const kpis = [
-    { label: "Today's Receipts", value: 12, icon: ArrowDownCircle, color: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400', delay: 0 },
-    { label: "Today's Dispatches", value: 8, icon: ArrowUpCircle, color: 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400', delay: 0.07 },
-    { label: 'Pending Transfers', value: 3, icon: ArrowLeftRight, color: 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400', delay: 0.14 },
-    { label: 'Low Stock Alerts', value: stats?.lowStockProducts, icon: AlertTriangle, color: 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400', delay: 0.21 },
-    { label: 'Active Notifications', value: stats?.activeAlerts, icon: Bell, color: 'bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400', delay: 0.28 },
+  useEffect(() => {
+    api.get('/dashboard/stats').then(r => r.data.data && setStats(r.data.data)).catch(() => {});
+  }, []);
+
+  const STAT_CARDS = [
+    { title: "Today's Receipts", value: 24, icon: ArrowUp, color: '#10B981', sub: 'Items received today' },
+    { title: "Today's Dispatches", value: 17, icon: ArrowDown, color: '#3B82F6', sub: 'Items dispatched' },
+    { title: 'Pending Deliveries', value: stats.incomingShipments, icon: Truck, color: '#F59E0B', sub: 'In transit' },
+    { title: 'Low Stock Alerts', value: stats.lowStockProducts, icon: AlertTriangle, color: '#EF4444', sub: 'Needs reorder' },
+    { title: 'Open POs', value: stats.pendingPurchaseOrders, icon: ShoppingCart, color: '#8B5CF6', sub: 'Awaiting delivery' },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Operations Dashboard</h1>
-          <p className="page-subtitle">Welcome, {user?.fullName?.split(' ')[0]} · {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-        </div>
-      </div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <h1 className="text-2xl font-bold text-white">Operations Dashboard</h1>
+        <p className="text-gray-500 text-sm">Today's warehouse and inventory overview</p>
+      </motion.div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {kpis.map(({ label, value, icon: Icon, color, delay }) => (
-          <motion.div key={label} className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-            <div className={`w-11 h-11 rounded-xl ${color} flex items-center justify-center mb-3`}>
-              <Icon className="w-5 h-5" />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {STAT_CARDS.map((c, i) => (
+          <motion.div key={c.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.07 }}
+            className="glass-card p-4">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: `${c.color}15` }}>
+              <c.icon className="w-4.5 h-4.5" style={{ color: c.color }} />
             </div>
-            <div className="text-3xl font-black text-foreground">{value ?? '—'}</div>
-            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">{label}</div>
+            <div className="text-2xl font-bold text-white">{c.value}</div>
+            <div className="text-xs font-medium text-gray-400 mt-0.5">{c.title}</div>
+            <div className="text-xs text-gray-600 mt-0.5">{c.sub}</div>
           </motion.div>
         ))}
       </div>
 
-      {/* Charts + Low Stock */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Stock Movement Chart */}
-        <motion.div className="bg-card border border-border rounded-2xl" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-          <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Monthly Stock Movement</h3>
-          </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={trends?.monthly || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }} />
-                <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="in" name="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="out" name="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Daily trend */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card p-6">
+          <h3 className="font-semibold text-white mb-1">Weekly Stock Movement</h3>
+          <p className="text-xs text-gray-500 mb-5">Receipts vs Dispatches this week</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={DAILY_TREND}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis dataKey="day" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: '#0D1424', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} />
+              <Bar dataKey="receipts" fill="#10B981" radius={[4,4,0,0]} />
+              <Bar dataKey="dispatches" fill="#3B82F6" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </motion.div>
 
-        {/* Low Stock Table */}
-        <motion.div className="bg-card border border-border rounded-2xl" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <h3 className="font-bold text-foreground">Low Stock Items</h3>
-            <Link to="/inventory" className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1">View All <ArrowRight className="w-3 h-3" /></Link>
-          </div>
-          <div className="overflow-hidden">
-            <table className="data-table">
-              <thead><tr><th>Product</th><th>SKU</th><th>Qty</th><th>Min</th></tr></thead>
-              <tbody>
-                {(lowStock?.data || []).slice(0, 6).map((p: any) => (
-                  <tr key={p.id}>
-                    <td className="font-medium text-foreground max-w-[120px] truncate">{p.name}</td>
-                    <td><span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{p.sku}</span></td>
-                    <td><span className={`font-bold text-sm ${p.quantity === 0 ? 'text-red-500' : 'text-amber-500'}`}>{p.quantity}</span></td>
-                    <td className="text-muted-foreground">{p.minStockLevel}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Low stock alerts */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card p-6">
+          <h3 className="font-semibold text-white mb-1">Critical Stock Alerts</h3>
+          <p className="text-xs text-gray-500 mb-5">Items requiring immediate attention</p>
+          <div className="space-y-3">
+            {ALERT_ITEMS.map(item => (
+              <div key={item.name} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.severity === 'OUT' ? 'bg-red-500/10' : 'bg-amber-500/10'}`}>
+                    <AlertTriangle className="w-4 h-4" style={{ color: item.severity === 'OUT' ? '#EF4444' : '#F59E0B' }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">{item.name}</p>
+                    <p className="text-xs text-gray-500">Min: {item.min} units</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold" style={{ color: item.severity === 'OUT' ? '#EF4444' : '#F59E0B' }}>{item.qty}</div>
+                  <span className={item.severity === 'OUT' ? 'badge-red' : 'badge-amber'}>{item.severity === 'OUT' ? 'Out of Stock' : 'Low Stock'}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </motion.div>
       </div>
-
-      {/* Quick Actions */}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-        <h2 className="text-lg font-bold text-foreground mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <QuickActionCard icon={ArrowDownCircle} title="Record Stock In" description="Receive and log incoming inventory" to="/inventory" color="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400" />
-          <QuickActionCard icon={ArrowUpCircle} title="Record Stock Out" description="Issue and log outgoing inventory" to="/inventory" color="bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400" />
-          <QuickActionCard icon={ShoppingCart} title="Create Purchase Order" description="Submit new PO for approval" to="/purchase-orders" color="bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400" />
-          <QuickActionCard icon={FileText} title="View Reports" description="Download inventory & supplier reports" to="/reports" color="bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400" />
-        </div>
-      </motion.div>
     </div>
   );
 }

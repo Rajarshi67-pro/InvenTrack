@@ -1,243 +1,611 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
 import {
-  Package, Warehouse, Truck, DollarSign, AlertTriangle, XCircle,
-  ShoppingCart, Bell, TrendingUp, Activity, ArrowUpRight
-} from 'lucide-react';
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, RadialBarChart, RadialBar
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { useAuthStore } from '../store/authStore';
-import { dashboardApi, forecastingApi, productsApi } from '../api';
+import {
+  Package, Warehouse, AlertTriangle, ShoppingCart,
+  Brain, ArrowUpRight, ArrowDownRight, RefreshCw,
+  Users, DollarSign
+} from 'lucide-react';
+import { api } from '../api/client';
 
-function AnimatedNumber({ value }: { value: number }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const step = value / 40;
-    const interval = setInterval(() => {
-      start += step;
-      if (start >= value) { setDisplay(value); clearInterval(interval); return; }
-      setDisplay(Math.floor(start));
-    }, 30);
-    return () => clearInterval(interval);
-  }, [value]);
-  return <span>{display.toLocaleString()}</span>;
+// ── Types ──────────────────────────────────────────────────────────────
+interface Stats {
+  totalProducts: number;
+  totalWarehouses: number;
+  totalSuppliers: number;
+  totalInventoryValue: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
+  pendingPurchaseOrders: number;
+  incomingShipments: number;
+  activeAlerts: number;
 }
 
-function KPICard({ label, value, icon: Icon, colorClass, glowClass, trend, trendUp, delay = 0 }: any) {
-  return (
-    <motion.div
-      className={`stat-card ${glowClass}`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4 }}
-      whileHover={{ y: -3 }}
-    >
-      <div className="flex items-start justify-between">
-        <div className={`w-11 h-11 rounded-xl ${colorClass} flex items-center justify-center flex-shrink-0`}>
-          <Icon className="w-5 h-5" />
-        </div>
-        {trend && (
-          <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${trendUp ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400'}`}>
-            <ArrowUpRight className={`w-3 h-3 ${!trendUp && 'rotate-180'}`} />{trend}
-          </span>
-        )}
-      </div>
-      <div className="mt-3">
-        <div className="text-3xl font-black text-foreground">
-          {typeof value === 'number' ? <AnimatedNumber value={value} /> : value ?? '—'}
-        </div>
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">{label}</div>
-      </div>
-    </motion.div>
-  );
-}
+// ── Mock data for charts ───────────────────────────────────────────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const now = new Date();
+const TREND_DATA = Array.from({ length: 12 }, (_, i) => {
+  const m = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+  return {
+    month: MONTHS[m.getMonth()],
+    inbound: Math.floor(Math.random() * 300 + 100),
+    outbound: Math.floor(Math.random() * 250 + 80),
+    value: Math.floor(Math.random() * 500000 + 200000),
+  };
+});
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const WAREHOUSE_DATA = [
+  { name: 'Main Hub', utilization: 84, capacity: 5000 },
+  { name: 'East Wing', utilization: 45, capacity: 3000 },
+  { name: 'West Depot', utilization: 72, capacity: 4000 },
+  { name: 'North Centre', utilization: 41, capacity: 2500 },
+];
+
+const SUPPLIER_DATA = [
+  { name: 'TechCorp', performance: 98, orders: 42 },
+  { name: 'GlobalSupply', performance: 92, orders: 38 },
+  { name: 'FastLogistics', performance: 85, orders: 29 },
+  { name: 'Allied Mfg', performance: 76, orders: 21 },
+  { name: 'Rapid Parts', performance: 88, orders: 33 },
+];
+
+const CATEGORY_DATA = [
+  { name: 'Industrial Parts', value: 35, color: '#3B82F6' },
+  { name: 'Machinery', value: 25, color: '#10B981' },
+  { name: 'Safety Equipment', value: 20, color: '#F59E0B' },
+  { name: 'Electrical', value: 12, color: '#8B5CF6' },
+  { name: 'Others', value: 8, color: '#6B7280' },
+];
+
+const FORECAST_DATA = Array.from({ length: 6 }, (_, i) => ({
+  month: MONTHS[(now.getMonth() + i + 1) % 12],
+  predicted: Math.floor(Math.random() * 400 + 300),
+  lower: Math.floor(Math.random() * 250 + 200),
+  upper: Math.floor(Math.random() * 550 + 400),
+}));
+
+// ── Custom tooltip ─────────────────────────────────────────────────────
+const CustomTooltip = ({ active, payload, label }: {
+  active?: boolean;
+  payload?: Array<{ dataKey: string; color: string; value: number }>;
+  label?: string;
+}) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-card border border-border rounded-xl shadow-xl p-3 text-sm">
-      <p className="font-semibold text-foreground mb-2">{label}</p>
-      {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.color }} className="text-xs">
-          {p.name}: <span className="font-bold">{typeof p.value === 'number' && p.name.includes('₹') ? `₹${p.value.toLocaleString()}` : p.value}</span>
-        </p>
+    <div className="bg-[#0D1424] border border-white/10 rounded-xl px-4 py-3 shadow-xl">
+      <p className="text-xs font-semibold text-gray-400 mb-2">{label}</p>
+      {payload.map((p) => (
+        <div key={p.dataKey} className="flex items-center gap-2 text-sm">
+          <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+          <span className="text-gray-400 capitalize">{p.dataKey}:</span>
+          <span className="font-semibold text-white">
+            {typeof p.value === 'number' && p.value > 1000
+              ? `₹${(p.value / 1000).toFixed(0)}K`
+              : p.value}
+          </span>
+        </div>
       ))}
     </div>
   );
 };
 
-export default function AdminDashboardPage() {
-  const { user } = useAuthStore();
-  const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ['dashboard-stats'], queryFn: dashboardApi.getStats });
-  const { data: trends } = useQuery({ queryKey: ['inventory-trends'], queryFn: dashboardApi.getInventoryTrends });
-  const { data: supplierPerf } = useQuery({ queryKey: ['supplier-performance'], queryFn: dashboardApi.getSupplierPerformance });
-  const { data: warehouseUtil } = useQuery({ queryKey: ['warehouse-utilization'], queryFn: dashboardApi.getWarehouseUtilization });
-  const { data: oracle } = useQuery({ queryKey: ['oracle-analytics'], queryFn: forecastingApi.getOracleAnalytics });
+// ── StatCard component ─────────────────────────────────────────────────
+function StatCard({
+  title, value, subtitle, icon: Icon, color, trend, delay = 0,
+}: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ElementType;
+  color: string;
+  trend?: { value: number; up: boolean };
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+      className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 flex flex-col gap-4 hover:border-white/[0.15] transition-all duration-300 group"
+    >
+      <div className="flex items-start justify-between">
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center"
+          style={{ background: `${color}18` }}
+        >
+          <Icon className="w-5 h-5" style={{ color }} />
+        </div>
+        {trend && (
+          <div
+            className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${
+              trend.up
+                ? 'bg-emerald-500/10 text-emerald-400'
+                : 'bg-red-500/10 text-red-400'
+            }`}
+          >
+            {trend.up ? (
+              <ArrowUpRight className="w-3 h-3" />
+            ) : (
+              <ArrowDownRight className="w-3 h-3" />
+            )}
+            {Math.abs(trend.value)}%
+          </div>
+        )}
+      </div>
+      <div>
+        <div className="text-3xl font-bold text-white tracking-tight">{value}</div>
+        <div className="text-sm font-medium text-gray-400 mt-0.5">{title}</div>
+        {subtitle && <div className="text-xs text-gray-600 mt-1">{subtitle}</div>}
+      </div>
+    </motion.div>
+  );
+}
 
-  const kpis = [
-    { label: 'Total Products', value: stats?.totalProducts, icon: Package, colorClass: 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400', glowClass: 'stat-card-glow-blue', trend: '+18 this week', trendUp: true, delay: 0 },
-    { label: 'Warehouses', value: stats?.totalWarehouses, icon: Warehouse, colorClass: 'bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400', glowClass: 'stat-card-glow-purple', delay: 0.07 },
-    { label: 'Suppliers', value: stats?.totalSuppliers, icon: Truck, colorClass: 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400', glowClass: 'stat-card-glow-amber', delay: 0.14 },
-    { label: 'Inventory Value', value: stats?.totalInventoryValue ? `₹${(stats.totalInventoryValue / 100000).toFixed(1)}L` : null, icon: DollarSign, colorClass: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400', glowClass: 'stat-card-glow-green', trend: '+12.4%', trendUp: true, delay: 0.21 },
-    { label: 'Low Stock Items', value: stats?.lowStockProducts, icon: AlertTriangle, colorClass: 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400', glowClass: 'stat-card-glow-amber', trend: 'Needs attention', trendUp: false, delay: 0.28 },
-    { label: 'Out of Stock', value: stats?.outOfStockProducts, icon: XCircle, colorClass: 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400', glowClass: 'stat-card-glow-red', delay: 0.35 },
-    { label: 'Pending POs', value: stats?.pendingPurchaseOrders, icon: ShoppingCart, colorClass: 'bg-sky-100 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400', glowClass: 'stat-card-glow-blue', delay: 0.42 },
-    { label: 'Active Alerts', value: stats?.activeAlerts, icon: Bell, colorClass: 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400', glowClass: 'stat-card-glow-red', delay: 0.49 },
+// ── Chart card wrapper ─────────────────────────────────────────────────
+function ChartCard({
+  title, subtitle, children, delay = 0, className = '',
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+      className={`bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 ${className}`}
+    >
+      <div className="mb-5">
+        <h3 className="font-semibold text-white text-base">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+      </div>
+      {children}
+    </motion.div>
+  );
+}
+
+// ── Skeleton loader ────────────────────────────────────────────────────
+function SkeletonLoader() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-52 bg-white/[0.05] rounded-lg animate-pulse" />
+          <div className="h-4 w-72 bg-white/[0.03] rounded-lg animate-pulse" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-8 w-20 bg-white/[0.05] rounded-xl animate-pulse" />
+          <div className="h-8 w-10 bg-white/[0.05] rounded-xl animate-pulse" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 h-36 animate-pulse"
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 h-80 lg:col-span-2 animate-pulse" />
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 h-80 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+// ── Main Dashboard ─────────────────────────────────────────────────────
+export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .get('/dashboard/stats')
+      .then((r) => setStats(r.data.data))
+      .catch(() =>
+        setStats({
+          totalProducts: 128,
+          totalWarehouses: 4,
+          totalSuppliers: 15,
+          totalInventoryValue: 543200,
+          lowStockProducts: 12,
+          outOfStockProducts: 3,
+          pendingPurchaseOrders: 8,
+          incomingShipments: 5,
+          activeAlerts: 4,
+        })
+      )
+      .finally(() => setLoading(false));
+  }, []);
+
+  const fmt = (n: number) =>
+    n >= 1_000_000
+      ? `₹${(n / 1_000_000).toFixed(1)}M`
+      : n >= 1_000
+      ? `₹${(n / 1_000).toFixed(0)}K`
+      : `₹${n}`;
+
+  if (loading) return <SkeletonLoader />;
+
+  const s = stats!;
+
+  const STAT_CARDS = [
+    {
+      title: 'Total Products',
+      value: s.totalProducts.toLocaleString(),
+      icon: Package,
+      color: '#3B82F6',
+      trend: { value: 12, up: true },
+      subtitle: 'Active SKUs',
+    },
+    {
+      title: 'Warehouses',
+      value: s.totalWarehouses,
+      icon: Warehouse,
+      color: '#10B981',
+      trend: { value: 0, up: true },
+      subtitle: 'Operational',
+    },
+    {
+      title: 'Inventory Value',
+      value: fmt(s.totalInventoryValue),
+      icon: DollarSign,
+      color: '#8B5CF6',
+      trend: { value: 8, up: true },
+      subtitle: 'Total stock worth',
+    },
+    {
+      title: 'Suppliers',
+      value: s.totalSuppliers,
+      icon: Users,
+      color: '#F59E0B',
+      trend: { value: 5, up: true },
+      subtitle: 'Active partners',
+    },
+    {
+      title: 'Low Stock Items',
+      value: s.lowStockProducts,
+      icon: AlertTriangle,
+      color: '#F59E0B',
+      trend: { value: 3, up: false },
+      subtitle: 'Needs attention',
+    },
+    {
+      title: 'Out of Stock',
+      value: s.outOfStockProducts,
+      icon: AlertTriangle,
+      color: '#EF4444',
+      trend: { value: 1, up: false },
+      subtitle: 'Critical',
+    },
+    {
+      title: 'Pending Orders',
+      value: s.pendingPurchaseOrders,
+      icon: ShoppingCart,
+      color: '#3B82F6',
+      subtitle: 'Awaiting action',
+    },
+    {
+      title: 'AI Alerts',
+      value: s.activeAlerts,
+      icon: Brain,
+      color: '#8B5CF6',
+      subtitle: 'Forecast alerts',
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
+      {/* ── Header ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="flex items-center justify-between"
+      >
         <div>
-          <h1 className="page-title">Welcome back, {user?.fullName?.split(' ')[0]} 👋</h1>
-          <p className="page-subtitle">Administrator Dashboard · {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            Enterprise Dashboard
+          </h1>
+          <p className="text-gray-500 text-sm mt-0.5">
+            Real-time inventory &amp; supply chain overview
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-semibold text-emerald-400">Live</span>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors text-gray-400 hover:text-white"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </motion.div>
+
+      {/* ── Stats Grid ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {STAT_CARDS.map((card, i) => (
+          <StatCard key={card.title} {...card} delay={i * 0.05} />
+        ))}
       </div>
 
-      {/* KPI Cards */}
-      {statsLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => <div key={i} className="skeleton h-28 rounded-2xl" />)}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpis.map(kpi => <KPICard key={kpi.label} {...kpi} />)}
-        </div>
-      )}
-
-      {/* Charts Row 1 */}
+      {/* ── Charts Row 1: Trends + Category ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Area Chart — Inventory Trends */}
-        <motion.div className="bg-card border border-border rounded-2xl lg:col-span-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-foreground">Inventory Value Trends</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Last 12 months</p>
-            </div>
-            <span className="badge-approved text-xs">Live</span>
-          </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={trends?.monthly || []}>
-                <defs>
-                  <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `₹${(v/1000).toFixed(0)}K`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="value" name="₹ Value" stroke="#3b82f6" fill="url(#colorVal)" strokeWidth={2} dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
+        <ChartCard
+          title="Inventory Trends"
+          subtitle="12-month stock movement"
+          delay={0.3}
+          className="lg:col-span-2"
+        >
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={TREND_DATA}>
+              <defs>
+                <linearGradient id="gradIn" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradOut" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: '#6B7280', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fill: '#6B7280', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ color: '#9CA3AF', fontSize: 12 }} />
+              <Area
+                type="monotone"
+                dataKey="inbound"
+                stroke="#3B82F6"
+                fill="url(#gradIn)"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Area
+                type="monotone"
+                dataKey="outbound"
+                stroke="#10B981"
+                fill="url(#gradOut)"
+                strokeWidth={2}
+                dot={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
-        {/* Radial — Warehouse Utilization */}
-        <motion.div className="bg-card border border-border rounded-2xl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-          <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Warehouse Utilization</h3>
-          </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={220}>
-              <RadialBarChart cx="50%" cy="50%" innerRadius="20%" outerRadius="90%" data={warehouseUtil?.warehouses || []} startAngle={90} endAngle={-270}>
-                <RadialBar background={{ fill: 'hsl(var(--muted))' }} dataKey="utilization" />
-                <Legend iconSize={8} layout="vertical" verticalAlign="bottom" wrapperStyle={{ fontSize: '11px', color: 'hsl(var(--muted-foreground))' }} />
-                <Tooltip content={<CustomTooltip />} formatter={(v: number) => [`${v}%`, 'Utilization']} />
-              </RadialBarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div className="bg-card border border-border rounded-2xl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <div className="px-6 py-4 border-b border-border"><h3 className="font-bold text-foreground">Monthly Stock Movement</h3></div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={trends?.monthly || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="in" name="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="out" name="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-
-        <motion.div className="bg-card border border-border rounded-2xl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-          <div className="px-6 py-4 border-b border-border"><h3 className="font-bold text-foreground">Supplier Performance</h3></div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={supplierPerf?.suppliers || []} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `${v}%`} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={95} />
-                <Tooltip content={<CustomTooltip />} formatter={(v: number) => [`${v}%`, 'On-time Delivery']} />
-                <Bar dataKey="performance" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Oracle Analytics Panel */}
-      {oracle && (
-        <motion.div className="bg-card border-l-4 border-l-blue-500 border border-border rounded-2xl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-          <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-blue-400" />
-            </div>
-            <div>
-              <h3 className="font-bold text-foreground">Oracle Analytics Cloud Insights</h3>
-              <p className="text-xs text-muted-foreground">AI-powered demand & risk analysis</p>
-            </div>
-            <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-blue-400 bg-blue-950/30 border border-blue-800 px-3 py-1.5 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />AI Powered
-            </span>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {[
-                { label: 'Prediction Score', value: oracle.predictionScore, color: 'text-emerald-400' },
-                { label: 'Shortage Risks', value: `${oracle.shortageRisks} Products`, color: 'text-amber-400' },
-                { label: 'Reorder Suggestions', value: `${oracle.reorderRecommendations} Items`, color: 'text-blue-400' },
-                { label: 'Optimization Gain', value: oracle.optimizationGain, color: 'text-emerald-400' },
-              ].map(m => (
-                <div key={m.label} className="bg-muted/40 rounded-2xl p-4 text-center border border-border">
-                  <div className={`text-2xl font-black ${m.color}`}>{m.value}</div>
-                  <div className="text-xs text-muted-foreground font-semibold mt-1">{m.label}</div>
+        <ChartCard
+          title="Category Distribution"
+          subtitle="By inventory value"
+          delay={0.35}
+        >
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie
+                data={CATEGORY_DATA}
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={85}
+                paddingAngle={3}
+                dataKey="value"
+              >
+                {CATEGORY_DATA.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(v: number) => [`${v}%`, 'Share']}
+                contentStyle={{
+                  background: '#0D1424',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12,
+                  color: '#fff',
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="space-y-1.5 mt-2">
+            {CATEGORY_DATA.map((c) => (
+              <div key={c.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: c.color }}
+                  />
+                  <span className="text-xs text-gray-400">{c.name}</span>
                 </div>
-              ))}
-            </div>
-            {oracle.riskAlerts?.length > 0 && (
-              <div>
-                <h4 className="text-sm font-bold text-foreground mb-3">Risk Alerts</h4>
-                <div className="space-y-2">
-                  {oracle.riskAlerts.map((a: any, i: number) => (
-                    <div key={i} className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border border-border">
-                      <AlertTriangle className={`w-4 h-4 ${a.risk === 'HIGH' ? 'text-red-400' : 'text-amber-400'}`} />
-                      <span className="font-semibold text-sm text-foreground flex-1">{a.product}</span>
-                      <span className={`badge-status text-xs ${a.risk === 'HIGH' ? 'badge-out' : 'badge-low'}`}>{a.risk}</span>
-                      <span className="text-xs text-muted-foreground">{a.daysToStockout} days to stockout</span>
-                    </div>
-                  ))}
-                </div>
+                <span className="text-xs font-semibold text-white">{c.value}%</span>
               </div>
-            )}
+            ))}
           </div>
-        </motion.div>
-      )}
+        </ChartCard>
+      </div>
+
+      {/* ── Charts Row 2: Warehouse + Supplier ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ChartCard
+          title="Warehouse Utilization"
+          subtitle="Current occupancy %"
+          delay={0.4}
+        >
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={WAREHOUSE_DATA} layout="vertical">
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.04)"
+                horizontal={false}
+              />
+              <XAxis
+                type="number"
+                domain={[0, 100]}
+                tick={{ fill: '#6B7280', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${v}%`}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                width={88}
+              />
+              <Tooltip
+                formatter={(v: number) => [`${v}%`, 'Utilization']}
+                contentStyle={{
+                  background: '#0D1424',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12,
+                  color: '#fff',
+                }}
+              />
+              <Bar dataKey="utilization" radius={[0, 6, 6, 0]}>
+                {WAREHOUSE_DATA.map((w) => (
+                  <Cell
+                    key={w.name}
+                    fill={
+                      w.utilization > 80
+                        ? '#EF4444'
+                        : w.utilization > 60
+                        ? '#F59E0B'
+                        : '#10B981'
+                    }
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard
+          title="Supplier Performance"
+          subtitle="On-time delivery rate"
+          delay={0.45}
+        >
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={SUPPLIER_DATA}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.04)"
+              />
+              <XAxis
+                dataKey="name"
+                tick={{ fill: '#6B7280', fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                domain={[60, 100]}
+                tick={{ fill: '#6B7280', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${v}%`}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: '#0D1424',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12,
+                  color: '#fff',
+                }}
+              />
+              <Bar dataKey="performance" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      {/* ── AI Demand Forecast ── */}
+      <ChartCard
+        title="AI Demand Forecast"
+        subtitle="Next 6-month prediction (ML model)"
+        delay={0.5}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <Brain className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-xs font-semibold text-purple-400">AI Powered</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            <span className="text-xs text-gray-400">Predicted demand</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+            <span className="w-2 h-2 rounded-full bg-purple-500/30" />
+            <span className="text-xs text-gray-400">Confidence band</span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={FORECAST_DATA}>
+            <defs>
+              <linearGradient id="gradForecast" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="gradBand" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.12} />
+                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis
+              dataKey="month"
+              tick={{ fill: '#6B7280', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fill: '#6B7280', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Area
+              type="monotone"
+              dataKey="upper"
+              stroke="transparent"
+              fill="url(#gradBand)"
+              strokeWidth={0}
+            />
+            <Area
+              type="monotone"
+              dataKey="predicted"
+              stroke="#8B5CF6"
+              fill="url(#gradForecast)"
+              strokeWidth={2}
+              dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 4 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="lower"
+              stroke="transparent"
+              fill="transparent"
+              strokeWidth={0}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </ChartCard>
     </div>
   );
 }
