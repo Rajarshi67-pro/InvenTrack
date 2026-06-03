@@ -18,6 +18,10 @@ import reportsRoutes from "./routes/reports.routes";
 import notificationsRoutes from "./routes/notifications.routes";
 import usersRoutes from "./routes/users.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
+import shipmentsRoutes from "./routes/shipments.routes";
+import stockTransfersRoutes from "./routes/stock-transfers.routes";
+import settingsRoutes from "./routes/settings.routes";
+import barcodesRoutes from "./routes/barcodes.routes";
 
 const app = express();
 
@@ -68,6 +72,10 @@ app.use("/api/v1/reports", reportsRoutes);
 app.use("/api/v1/notifications", notificationsRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/shipments", shipmentsRoutes);
+app.use("/api/v1/stock-transfers", stockTransfersRoutes);
+app.use("/api/v1/settings", settingsRoutes);
+app.use("/api/v1/barcodes", barcodesRoutes);
 
 // API docs
 app.get("/api/docs.json", (_, res) => res.json({ openapi: "3.0.0", info: { title: "InvenTrack Pro API", version: "1.0.0", description: "Enterprise IMS REST API" }, servers: [{ url: "/api/v1" }] }));
@@ -89,6 +97,10 @@ app.get("/", (_, res) => res.json({
     orders:    "/api/v1/purchase-orders",
     dashboard: "/api/v1/dashboard",
     reports:   "/api/v1/reports",
+    shipments: "/api/v1/shipments",
+    transfers: "/api/v1/stock-transfers",
+    settings:  "/api/v1/settings",
+    barcodes:  "/api/v1/barcodes",
   },
 }));
 

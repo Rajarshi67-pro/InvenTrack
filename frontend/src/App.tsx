@@ -17,8 +17,9 @@ import NotificationsPage from './pages/NotificationsPage';
 import UsersPage from './pages/UsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import ShipmentsPage from './pages/ShipmentsPage';
-
-// ─── Protected Route Guard ────────────────────────────────────────────────────
+import StockTransfersPage from './pages/StockTransfersPage';
+import BarcodeScannerPage from './pages/BarcodeScannerPage';
+import SettingsPage from './pages/SettingsPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -30,12 +31,15 @@ function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
+      <div
+        className="h-screen flex items-center justify-center"
+        style={{ background: '#0A0F1E' }}
+      >
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground text-sm font-medium tracking-wide">
-            Loading InvenTrack…
-          </p>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center animate-pulse">
+            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          </div>
+          <p className="text-gray-500 text-sm font-medium">Loading SupplySync AI…</p>
         </div>
       </div>
     );
@@ -43,27 +47,17 @@ function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (adminOnly && user?.role !== 'ADMIN') return <Navigate to="/dashboard" replace />;
-
   return <>{children}</>;
 }
-
-// ─── Role-based Dashboard Router ─────────────────────────────────────────────
 
 function DashboardRouter() {
   const { user } = useAuthStore();
   return user?.role === 'ADMIN' ? <AdminDashboardPage /> : <ManagerDashboardPage />;
 }
 
-// ─── App Root ─────────────────────────────────────────────────────────────────
-
 export default function App() {
   const { setAuth, setLoading, logout, accessToken, refreshToken } = useAuthStore();
 
-  /**
-   * On mount, verify the persisted access token is still valid by calling
-   * /auth/me. If it fails the interceptor in api/client.ts will attempt a
-   * token refresh via the refresh token; if that also fails we logout.
-   */
   useEffect(() => {
     const init = async () => {
       if (!accessToken) {
@@ -84,10 +78,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
         <Route path="/login" element={<LoginPage />} />
-
-        {/* Protected shell — all children render inside AppLayout */}
         <Route
           path="/"
           element={
@@ -104,11 +95,19 @@ export default function App() {
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
           <Route path="shipments" element={<ShipmentsPage />} />
+          <Route path="stock-transfers" element={<StockTransfersPage />} />
           <Route path="forecasting" element={<ForecastingPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
-
-          {/* Admin-only routes */}
+          <Route path="barcode-scanner" element={<BarcodeScannerPage />} />
+          <Route
+            path="settings"
+            element={
+              <ProtectedRoute adminOnly>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="users"
             element={
@@ -126,8 +125,6 @@ export default function App() {
             }
           />
         </Route>
-
-        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>

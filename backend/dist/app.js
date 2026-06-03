@@ -23,6 +23,10 @@ const reports_routes_1 = __importDefault(require("./routes/reports.routes"));
 const notifications_routes_1 = __importDefault(require("./routes/notifications.routes"));
 const users_routes_1 = __importDefault(require("./routes/users.routes"));
 const dashboard_routes_1 = __importDefault(require("./routes/dashboard.routes"));
+const shipments_routes_1 = __importDefault(require("./routes/shipments.routes"));
+const stock_transfers_routes_1 = __importDefault(require("./routes/stock-transfers.routes"));
+const settings_routes_1 = __importDefault(require("./routes/settings.routes"));
+const barcodes_routes_1 = __importDefault(require("./routes/barcodes.routes"));
 const app = (0, express_1.default)();
 // ── CORS ────────────────────────────────────────────────────────────────────
 // Build an allowlist from FRONTEND_URL (comma-separated) + dev defaults
@@ -68,6 +72,10 @@ app.use("/api/v1/reports", reports_routes_1.default);
 app.use("/api/v1/notifications", notifications_routes_1.default);
 app.use("/api/v1/users", users_routes_1.default);
 app.use("/api/v1/dashboard", dashboard_routes_1.default);
+app.use("/api/v1/shipments", shipments_routes_1.default);
+app.use("/api/v1/stock-transfers", stock_transfers_routes_1.default);
+app.use("/api/v1/settings", settings_routes_1.default);
+app.use("/api/v1/barcodes", barcodes_routes_1.default);
 // API docs
 app.get("/api/docs.json", (_, res) => res.json({ openapi: "3.0.0", info: { title: "InvenTrack Pro API", version: "1.0.0", description: "Enterprise IMS REST API" }, servers: [{ url: "/api/v1" }] }));
 // Root
@@ -87,6 +95,10 @@ app.get("/", (_, res) => res.json({
         orders: "/api/v1/purchase-orders",
         dashboard: "/api/v1/dashboard",
         reports: "/api/v1/reports",
+        shipments: "/api/v1/shipments",
+        transfers: "/api/v1/stock-transfers",
+        settings: "/api/v1/settings",
+        barcodes: "/api/v1/barcodes",
     },
 }));
 app.use(errorHandler_1.notFound);
