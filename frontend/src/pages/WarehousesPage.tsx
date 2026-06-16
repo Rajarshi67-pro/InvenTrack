@@ -29,7 +29,8 @@ export default function WarehousesPage() {
   const handleAdd = async () => {
     if (!form.name || !form.location) return toast.error('Please fill all required fields');
     try {
-      await api.post('/warehouses', { ...form, capacity: Number(form.capacity) });
+      const res = await api.post('/warehouses', { ...form, capacity: Number(form.capacity) });
+      setWarehouses(prev => [res.data.data || res.data, ...prev]);
       toast.success('Warehouse created!');
       setShowModal(false);
       setForm({ name: '', location: '', capacity: '' });

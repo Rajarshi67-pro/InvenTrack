@@ -31,7 +31,8 @@ export default function ProductsPage() {
   const handleAdd = async () => {
     if (!form.name || !form.sku) return toast.error('Name and SKU are required');
     try {
-      await api.post('/products', { ...form, unitPrice: Number(form.unitPrice), minStockLevel: Number(form.minStockLevel), maxStockLevel: Number(form.maxStockLevel) });
+      const res = await api.post('/products', { ...form, unitPrice: Number(form.unitPrice), minStockLevel: Number(form.minStockLevel), maxStockLevel: Number(form.maxStockLevel) });
+      setProducts(prev => [res.data.data || res.data, ...prev]);
       toast.success('Product created!');
       setShowModal(false);
       setForm({ name: '', sku: '', category: '', unitPrice: '', minStockLevel: '', maxStockLevel: '' });

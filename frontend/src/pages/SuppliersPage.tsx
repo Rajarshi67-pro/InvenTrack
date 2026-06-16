@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Users, Star, TrendingUp, Phone, Mail, Plus, Search, Activity } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, Star, TrendingUp, Phone, Mail, Plus, Search, Activity, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../api/client';
 
 const MOCK = [
@@ -16,6 +17,19 @@ type Supplier = typeof MOCK[number];
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>(MOCK);
   const [search, setSearch] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ name: '', contactName: '', email: '', phone: '', country: '' });
+
+  const handleAdd = async () => {
+    if (!form.name || !form.email) return toast.error('Name and email are required');
+    try {
+      const res = await api.post('/suppliers', form);
+      setSuppliers(prev => [res.data.data || res.data, ...prev]);
+      toast.success('Supplier added!');
+      setShowModal(false);
+      setForm({ name: '', contactName: '', email: '', phone: '', country: '' });
+    } catch { toast.error('Failed to add supplier'); }
+  };
 
   useEffect(() => {
     api.get('/suppliers').then(r => { const d = r.data.data?.data || r.data.data; if (Array.isArray(d) && d.length) setSuppliers(d); }).catch(() => {});
@@ -33,7 +47,7 @@ export default function SuppliersPage() {
           <h1 className="section-title">Supplier Management</h1>
           <p className="section-subtitle">Track supplier performance, contracts, and relationships</p>
         </div>
-        <button className="btn-primary"><Plus className="w-4 h-4" />Add Supplier</button>
+        <button className="btn-primary" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" />Add Supplier</button>
       </div>
 
       {/* Stats */}
@@ -93,6 +107,48 @@ export default function SuppliersPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* Add Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+              className="glass-card w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-white">Add Supplier</h3>
+                <button onClick={() => setShowModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-400"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Company Name *</label>
+                  <input className="input-field" value={form.name} onChange={e => setForm(s => ({...s, name: e.target.value}))} placeholder="TechCorp Industries" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Contact Name</label>
+                  <input className="input-field" value={form.contactName} onChange={e => setForm(s => ({...s, contactName: e.target.value}))} placeholder="Rahul Sharma" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Email *</label>
+                  <input className="input-field" value={form.email} onChange={e => setForm(s => ({...s, email: e.target.value}))} placeholder="rahul@techcorp.in" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone</label>
+                  <input className="input-field" value={form.phone} onChange={e => setForm(s => ({...s, phone: e.target.value}))} placeholder="+91-9876543210" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Country</label>
+                  <input className="input-field" value={form.country} onChange={e => setForm(s => ({...s, country: e.target.value}))} placeholder="India" />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button className="btn-secondary flex-1 justify-center" onClick={() => setShowModal(false)}>Cancel</button>
+                <button className="btn-primary flex-1 justify-center" onClick={handleAdd}><Plus className="w-4 h-4" />Create Supplier</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

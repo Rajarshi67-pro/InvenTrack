@@ -40,7 +40,8 @@ export default function InventoryPage() {
   const handleStockIn = async () => {
     if (!form.productId || !form.quantity) return toast.error('Product and quantity are required');
     try {
-      await api.post('/inventory/stock-in', { ...form, quantity: Number(form.quantity) });
+      const res = await api.post('/inventory/stock-in', { ...form, quantity: Number(form.quantity) });
+      setMovements(prev => [res.data.data || res.data, ...prev]);
       toast.success('Stock recorded!');
       setShowStockIn(false);
       setForm({ productId: '', quantity: '', warehouseId: '', notes: '' });
