@@ -13,8 +13,11 @@ const dbDown = () => !database_1.AppDataSource.isInitialized;
 exports.inventoryController = {
     async stockIn(req, res, next) {
         try {
-            if (dbDown())
-                return ok(res, { id: "demo-new", type: "IN", ...req.body }, "Stock in recorded (demo mode)", 201);
+            if (dbDown()) {
+                const newItem = { id: `demo-m-${Date.now()}`, type: "IN", ...req.body, createdAt: new Date().toISOString() };
+                MOCK_MOVEMENTS.unshift(newItem);
+                return ok(res, newItem, "Stock in recorded (demo mode)", 201);
+            }
             ok(res, await inventory_service_1.inventoryService.stockIn(req.body, req.user.userId), "Stock in recorded", 201);
         }
         catch (e) {
@@ -23,8 +26,11 @@ exports.inventoryController = {
     },
     async stockOut(req, res, next) {
         try {
-            if (dbDown())
-                return ok(res, { id: "demo-new", type: "OUT", ...req.body }, "Stock out recorded (demo mode)", 201);
+            if (dbDown()) {
+                const newItem = { id: `demo-m-${Date.now()}`, type: "OUT", ...req.body, createdAt: new Date().toISOString() };
+                MOCK_MOVEMENTS.unshift(newItem);
+                return ok(res, newItem, "Stock out recorded (demo mode)", 201);
+            }
             ok(res, await inventory_service_1.inventoryService.stockOut(req.body, req.user.userId), "Stock out recorded", 201);
         }
         catch (e) {

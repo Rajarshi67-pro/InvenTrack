@@ -39,7 +39,11 @@ export const shipmentsController = {
   },
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      if (dbDown()) return ok(res, { id: 'demo-new', shipmentNumber: `SHP-2026-${Date.now()}`, ...req.body, status: 'CREATED' }, 'Shipment created (demo mode)', 201);
+      if (dbDown()) {
+        const newItem = { id: `demo-sh-${Date.now()}`, shipmentNumber: `SHP-${Date.now()}`, ...req.body, status: 'CREATED', createdAt: new Date().toISOString() };
+        MOCK_SHIPMENTS.unshift(newItem as any);
+        return ok(res, newItem, 'Shipment created (demo mode)', 201);
+      }
       const repo = AppDataSource.getRepository(Shipment);
       const count = await repo.count();
       const shipment = repo.create({ ...req.body, shipmentNumber: `SHP-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`, createdBy: req.user?.userId });

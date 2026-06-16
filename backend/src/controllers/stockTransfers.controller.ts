@@ -21,7 +21,11 @@ export const stockTransfersController = {
   },
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      if (dbDown()) return ok(res, { id: 'demo-new', ...req.body, status: 'PENDING' }, 'Transfer initiated (demo mode)', 201);
+      if (dbDown()) {
+        const newItem = { id: `demo-t-${Date.now()}`, ...req.body, status: 'PENDING', createdAt: new Date().toISOString() };
+        MOCK_TRANSFERS.unshift(newItem as any);
+        return ok(res, newItem, 'Transfer initiated (demo mode)', 201);
+      }
       ok(res, { id: 'demo-new', ...req.body, status: 'PENDING' }, 'Transfer initiated', 201);
     } catch (e) { next(e); }
   },

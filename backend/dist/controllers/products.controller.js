@@ -35,8 +35,11 @@ exports.productsController = {
     },
     async create(req, res, next) {
         try {
-            if (dbDown())
-                return ok(res, { id: "demo-new", ...req.body }, "Product created (demo mode)", 201);
+            if (dbDown()) {
+                const newItem = { id: `demo-p-${Date.now()}`, ...req.body, quantity: req.body.quantity || 0, isActive: 1 };
+                MOCK_PRODUCTS.unshift(newItem);
+                return ok(res, newItem, "Product created (demo mode)", 201);
+            }
             ok(res, await product_service_1.productService.create(req.body, req.user?.userId), "Product created", 201);
         }
         catch (e) {

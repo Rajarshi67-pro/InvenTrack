@@ -34,8 +34,11 @@ exports.suppliersController = {
     },
     async create(req, res, next) {
         try {
-            if (dbDown())
-                return ok(res, { id: "demo-new", ...req.body }, "Supplier created (demo mode)", 201);
+            if (dbDown()) {
+                const newItem = { id: `demo-s-${Date.now()}`, ...req.body, deliveryPerformance: 100, rating: 5.0, isActive: 1 };
+                MOCK_SUPPLIERS.unshift(newItem);
+                return ok(res, newItem, "Supplier created (demo mode)", 201);
+            }
             ok(res, await supplier_service_1.supplierService.create(req.body, req.user?.userId), "Supplier created", 201);
         }
         catch (e) {

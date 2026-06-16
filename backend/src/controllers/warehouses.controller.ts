@@ -30,7 +30,11 @@ export const warehousesController = {
   },
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      if (dbDown()) return ok(res, { id: "demo-new", ...req.body }, "Warehouse created (demo mode)", 201);
+      if (dbDown()) {
+        const newItem = { id: `demo-w-${Date.now()}`, ...req.body, currentStock: 0, utilizationPercent: 0, isActive: 1 };
+        MOCK_WAREHOUSES.unshift(newItem as any);
+        return ok(res, newItem, "Warehouse created (demo mode)", 201);
+      }
       ok(res, await warehouseService.create(req.body, req.user?.userId), "Warehouse created", 201);
     } catch (e) { next(e); }
   },

@@ -29,7 +29,11 @@ export const purchaseOrdersController = {
   },
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      if (dbDown()) return ok(res, { id: "demo-new", poNumber: "PO-2026-NEW", ...req.body, status: "DRAFT" }, "PO created (demo mode)", 201);
+      if (dbDown()) {
+        const newItem = { id: `demo-po-${Date.now()}`, poNumber: `PO-${Date.now()}`, ...req.body, status: "DRAFT", createdAt: new Date().toISOString().split('T')[0] };
+        MOCK_POS.unshift(newItem as any);
+        return ok(res, newItem, "PO created (demo mode)", 201);
+      }
       ok(res, await purchaseOrderService.create(req.body, req.user!.userId), "PO created", 201);
     } catch (e) { next(e); }
   },
